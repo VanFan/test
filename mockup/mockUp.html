@@ -97,6 +97,14 @@
       stroke-width: 0;
       fill: #444;
     }
+
+    .title {
+      font-size: 20px;
+    }
+
+    .chart {
+      font-size: 10px;
+    }
     
     .dot {
       opacity: 1.25;
@@ -115,9 +123,10 @@
             overflow: scroll;">
       </div>
   <script>
-var PADDING = 100,
+var TITLE_SECTIONID_WIDTH = 50,
+    PADDING = 100 + TITLE_SECTIONID_WIDTH,
   MARGIN = 800, //default
-  PADDING_HEIGHT = 0,
+  PADDING_HEIGHT = 50,
   ROW_HEIGHT = 60,
   HEIGHT_SVG = 3000,
   WIDTH_SVG = 1000, // default
@@ -132,13 +141,14 @@ var PADDING = 100,
   textLeftPadding = 5,
   textDownPadding = WIDTH_RECTANGLE / 3.2,
   PADDING_RECTANGLE = (ROW_HEIGHT - WIDTH_RECTANGLE) / 2,
+  WIDTH_TICK = 400,//default
   COLOR = {
     // Body
     "RECT_FILL_Freeze" :"rgb(255,99,71)", // status is not 0
     "RECT_FILL_Move" : "rgb(140,190,232)" ,// status is 0, default
     "RECT_FILL_act0" : "grey", // status is 0, act is 0
-    "RECT_FILL_act1" : "rgb(92,186,230)",// status is 0, act is 1
-    "RECT_FILL_act2" : "rgb(182,217,87)",// status is 0, act is 2
+    "RECT_FILL_act1" : "rgb(39, 163, 221)",// status is 0, act is 1
+    "RECT_FILL_act2" : "rgb(157, 198, 45)",// status is 0, act is 2
     "RECT_FILL_act3" : "darkblue",// status is 0, act is 3
     "RECT_TEXT" : "black",
     //Round
@@ -194,7 +204,7 @@ var PADDING = 100,
     var aDateLabels = [{
         DATEKEY : "" + dtToday.getFullYear() + formatter0(dtToday.getMonth()) + formatter0(dtToday.getDate())
     }];
-    var aTimeLabel = mockTime(8,18,30);
+    var aTimeLabel = mockTime(8,20,30);
     function mockTime(startTime, endTime, lenghth){
         var aTime = [];
         var dtStart = new Date(dtToday.getFullYear(), dtToday.getMonth(), dtToday.getDate(),startTime);
@@ -271,7 +281,8 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
     var sDateMax = aDateLabels.pop().DATEKEY;
     var sTimeMax = aTimeLabel.pop().TIMEKEY;
     var timeMax = new Date(sDateMax.substr(0, 4), sDateMax.substr(4, 2) - 1, sDateMax.substr(6, 2), sTimeMax.substr(0, 2), sTimeMax.substr(2, 2), sTimeMax.substr(4, 2));
-
+    // var timeInterval = (timeMax - timeMin) / (nTicks - 1) /1000 / 60;
+    WIDTH_TICK = MARGIN / (nTicks - 1);
     function getGateName(aOriList) {
       var aList = [];
       aOriList.forEach(function(item) {
@@ -353,11 +364,12 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
     }
 
     function leftDragMove(d) {
-      if (d.status != "0")
+      if (d.status !== "0"){
         return;
+      }
       d3.select(this)
         .attr("x", function() {
-          var x = d3.event.x;
+          var x = Math.floor((d3.event.x - PADDING + WIDTH_RESIZE) / WIDTH_TICK) * WIDTH_TICK + PADDING - WIDTH_RESIZE;
           x = Math.max(x, timeScale(timeMin) + PADDING - WIDTH_RESIZE);
           x = Math.min(x, timeScale(d.endTime) + PADDING - WIDTH_RESIZE);
           
@@ -385,12 +397,12 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
     }
 
     function rightDragMove(d) {
-      if (d.status !== "0")
+      if (d.status !== "0"){
         return;
+      }
       d3.select(this)
         .attr("x", function() {
-          //  d.body.setAttribute("x",d3.event.x);
-          var x = d3.event.x;
+          var x = Math.floor((d3.event.x - PADDING) / WIDTH_TICK) * WIDTH_TICK + PADDING;
           x = Math.min(x, timeScale(timeMax) + PADDING);
           x = Math.max(x, timeScale(d.startTime) + PADDING);
 
@@ -408,11 +420,12 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
     }
 
     function upDragMove(d) {
-      if (d.status !== "0" || d.gate === "")
+      if (d.status !== "0" || d.gate === ""){
         return;
+      }
       d3.select(this)
         .attr("y", function() {
-          var y = Math.floor((d3.event.y - PADDING_RECTANGLE) / ROW_HEIGHT) * ROW_HEIGHT;
+          var y = Math.floor((d3.event.y - PADDING_RECTANGLE) / ROW_HEIGHT) * ROW_HEIGHT + PADDING_HEIGHT;
           y = Math.min(y, parseFloat(d.down.getAttribute("y")) - HEIGHT_RISIZE - WIDTH_RECTANGLE);
           y = Math.max(y, ROW_HEIGHT + PADDING_HEIGHT);
           // d.gate = aGateList[row2gate(yGScale.invert(y - PADDING_HEIGHT - WIDTH_RECTANGLE / 2)) - 1];
@@ -434,11 +447,12 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
     }
 
     function downDragMove(d) {
-      if (d.status !== "0" || d.gate === "")
+      if (d.status !== "0" || d.gate === ""){
         return;
+      }
       d3.select(this)
         .attr("y", function() {
-          var y = Math.ceil((d3.event.y + PADDING_RECTANGLE) / ROW_HEIGHT) * ROW_HEIGHT - PADDING_RECTANGLE;
+          var y = Math.floor((d3.event.y + PADDING_RECTANGLE) / ROW_HEIGHT) * ROW_HEIGHT - PADDING_RECTANGLE + PADDING_HEIGHT;
           y = Math.max(y, parseFloat(d.up.getAttribute("y")) + HEIGHT_RISIZE + WIDTH_RECTANGLE);
           d.groupIndexTo = row2gate(yGScale.invert(y - PADDING_HEIGHT - WIDTH_RECTANGLE / 2));
           d.gate = aGateList.slice(d.groupIndexFrom, d.groupIndexTo ).join(",");
@@ -461,11 +475,12 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
     }
 
     function dragmove(d) {
-      if (d.status != "0")
+      if (d.status !== "0"){
         return;
+      }
       d3.select(this)
         .attr("x", function() {
-          var x = d3.event.x;
+          var x = Math.floor((d3.event.x - PADDING - d.width / 2) / WIDTH_TICK) * WIDTH_TICK + PADDING + d.width / 2;
           //left side
           x = Math.max(x, timeScale(timeMin) + PADDING + d.width / 2);
           //right side
@@ -482,7 +497,7 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
           return x - d.width / 2;
         })
         .attr("y", function() {
-          var y = Math.floor((d3.event.y - PADDING_RECTANGLE) / ROW_HEIGHT) * ROW_HEIGHT + PADDING_RECTANGLE;
+          var y = Math.floor((d3.event.y - PADDING_RECTANGLE - PADDING_HEIGHT) / ROW_HEIGHT) * ROW_HEIGHT + PADDING_RECTANGLE + PADDING_HEIGHT;
           // d.gate = aGateList[row2gate(yGScale.invert(y - PADDING_HEIGHT - WIDTH_RECTANGLE / 2)) - 1];
           d.groupIndexFrom = row2gate(yGScale.invert(y - PADDING_HEIGHT - WIDTH_RECTANGLE / 2));
           d.groupIndexTo = d.groupIndexFrom;
@@ -501,8 +516,9 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
     }
 
     function formatter2(num) {
-      if (num >= 10)
+      if (num >= 10){
         return num;
+      }
       return "0" + num;
   }
 
@@ -530,7 +546,13 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         return true;
     }
     function checkAvailable(d){
+        //set to dummy
+        if(d.gate === ""){
+            return true;
+        }
+        //check overlap
         for(var i = 0; i < intervals.length; i ++ ){
+            //except itself
             if(intervals[i] === d){
                 continue;
             }
@@ -538,14 +560,21 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
                 return false;
             }
         }
+        //default
         return true;
+    }
+    function showDrag(d){
+        this.style.opacity = 0.8;
+    }
+    function hideDrag(d){
+        this.style.opacity = 0;
     }
     function dragend(d) {
       if(checkAvailable(d)){
         d.source.STARTTIME = time2string(d.startTime);
         d.source.FINISHTIME = time2string(d.endTime);
         d.source.APP_SECTIONID = d.gate;
-        latestChangeAppointment = d.source;
+        latestChangeAppointment = d;
       }
       resetD3();
       drawGantt();
@@ -564,14 +593,13 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
       .on("drag", rightDragMove)
       .on("dragend", dragend);
     var dragup = d3.behavior.drag()
-      // .on("dragstart", dragStartRight)
       .on("drag", upDragMove)
       .on("dragend", dragend);
     var dragdown = d3.behavior.drag()
-      // .on("dragstart", dragStartRight)
       .on("drag", downDragMove)
       .on("dragend", dragend);
 
+    //generate data in gantt chart from input data
     function generateData() {
       intervals = [];
         aAppointment.forEach(function(item) {
@@ -682,13 +710,34 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         k++;
       }
       // Draw Axis
+      //简体中文本地化
+        var zh = d3.locale({
+            decimal: ".",
+            thousands: ",",
+            grouping: [3],
+            currency: ["¥", ""],
+            dateTime: "%a %b %e %X %Y",
+            date: "%Y/%-m/%-d",
+            time: "%H:%M:%S",
+            periods: ["上午", "下午"],
+            days: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"],
+            shortDays: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"],
+            months: ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"],
+            shortMonths: ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"]
+        });
       var numOfGates = count;
       timeScale = d3.scaleTime().domain([timeMin, timeMax]).range([0, MARGIN]);
-      var xTAxis = d3.svg.axis().scale(timeScale).ticks(Math.min(nTicks, 10));
+      // var xTAxis = d3.svg.axis().scale(timeScale).ticks(Math.min(nTicks, 10));
+      var xTAxis = d3.svg.axis()
+        .scale(timeScale)
+        .ticks(nTicks)
+        //.tickSize(12,20)
+        .tickFormat(zh.timeFormat("%H:%M"));
       svg.append("g")
         .attr("class", "axis")
         .attr("transform", "translate(" + PADDING + ", " + PADDING_HEIGHT + ")")
         .call(xTAxis);
+    d3.selectAll('g.tick text').attr('transform','translate(20,20)rotate(60)');
       yGScale = d3.scale.linear()
         .domain([0, numOfGates])
         .range([0, numOfGates * ROW_HEIGHT]);
@@ -713,9 +762,8 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         svg.append("text")
           .attr("class", "chart")
           .attr("y", yGScale(i) + ROW_HEIGHT / 2)
-          .attr("transform", "translate(10, " + PADDING_HEIGHT + ")")
+          .attr("transform", "translate(" + TITLE_SECTIONID_WIDTH + ", " + PADDING_HEIGHT + ")")
           .text(aGateList[index])
-          .style("font-size", "10");
         i += gatesArray[g];
         g++;
       }
@@ -729,6 +777,17 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         .attr("stroke-width", 1)
         .attr("transform", "translate(" + PADDING + ", " + PADDING_HEIGHT + ")");
       lineMax = i;
+      //Title
+      // SECTION ID
+      svg.append("text")
+          .attr("class", "title")
+          .attr("transform", "translate(" + TITLE_SECTIONID_WIDTH / 2 + ", " + 270 + ")rotate(270)")
+          .text("SECTION ID");
+      // TIME
+      svg.append("text")
+          .attr("class", "title")
+          .attr("transform", "translate(" + WIDTH_SVG / 2 + ", " + PADDING_HEIGHT / 2 + ")")
+          .text("TIME");
       //text
       svg.selectAll("text.plate")
       .data(intervals)
@@ -835,7 +894,7 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
             return COLOR.RECT_FILL_ROUND_Move;
           }
         })
-        .style("opacity", 0.8)
+        .style("opacity", 0)
         .attr("x", function(d) {
           d.left = this;
           return timeScale(d.startTime) + PADDING - WIDTH_RESIZE;
@@ -850,6 +909,8 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
             return WIDTH_RECTANGLE + (d.gate.split(",").length > 1 ? eval(gatesArray.slice(d.groupIndexFrom,d.groupIndexTo).join('+')) : 0) * ROW_HEIGHT;
         })
         .attr("cursor", "ew-resize")
+        .on('mouseover', showDrag)
+        .on('mouseout', hideDrag)
         .call(dragleft);
         //right
       svg.selectAll("rect.right")
@@ -864,7 +925,7 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
             return COLOR.RECT_FILL_ROUND_Move;
           }
         })
-        .style("opacity", 0.8)
+        .style("opacity", 0)
         .attr("x", function(d) {
           d.right = this;
           return timeScale(d.endTime) + PADDING;
@@ -879,6 +940,8 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
             return WIDTH_RECTANGLE + (d.gate.split(",").length > 1 ? eval(gatesArray.slice(d.groupIndexFrom,d.groupIndexTo).join('+')) : 0) * ROW_HEIGHT;
         })
         .attr("cursor", "ew-resize")
+        .on('mouseover', showDrag)
+        .on('mouseout', hideDrag)
         .call(dragright);
         //up
       svg.selectAll("rect.up")
@@ -893,7 +956,7 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
             return COLOR.RECT_FILL_ROUND_Move;
           }
         })
-        .style("opacity", 0.8)
+        .style("opacity", 0)
         .attr("x", function(d) {
           d.up = this;
           return timeScale(d.startTime) + PADDING;
@@ -906,6 +969,8 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         })
         .attr("height", HEIGHT_RISIZE)
         .attr("cursor", "ns-resize")
+        .on('mouseover', showDrag)
+        .on('mouseout', hideDrag)
         .call(dragup);
         //down
       svg.selectAll("rect.down")
@@ -920,7 +985,7 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
             return COLOR.RECT_FILL_ROUND_Move;
           }
         })
-        .style("opacity", 0.8)
+        .style("opacity", 0)
         .attr("x", function(d) {
           d.down = this;
           return timeScale(d.startTime) + PADDING;
@@ -933,6 +998,8 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         })
         .attr("height", HEIGHT_RISIZE)
         .attr("cursor", "ns-resize")
+        .on('mouseover', showDrag)
+        .on('mouseout', hideDrag)
         .call(dragdown);
         //legend
         //rect
@@ -968,19 +1035,7 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
       });
       if(latestChangeAppointment){
         // TBD
-        // svg.append("text")
-        //   .attr("class", "chart")
-        //   .attr("y", 0)
-        //   .attr("transform", "translate(10, " + 10 + ")")
-        //   .text(latestChangeAppointment.PLATE)
-        //   .style("font-size", "50");
-
-        // svg.append("text")
-        //   .attr("class", "content")
-        //   .style("fill", COLOR.RECT_TEXT)
-        //   .text()
-        //   .attr("x", MARGIN + PADDING + WIDTH_LEGEND / 3)
-        //   .attr("y", 0);
+       // tipLastChanged.show();
       }       
       return;
     }
@@ -991,6 +1046,13 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
             return "<span style='color:red'>TU: " + d.TU + "</span>";
         });
     svg.call(tipContent);
+
+    // var tipLastChanged = d3.tip()
+    //     .attr('class', 'd3-tip')
+    //     .html(function(d) {
+    //         return "<span style='color:red'>Test</span>";
+    //     });
+    // svg.call(tipLastChanged);
     drawGantt();
 }
   </script>
