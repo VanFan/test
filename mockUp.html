@@ -1,0 +1,1061 @@
+<html>
+
+<head>
+  <script src="js/d3.v3.min.js" charset="utf-8"></script>
+  <script src="js/jquery-1.12.1.min.js"></script>
+  <script src="https://d3js.org/d3-array.v1.min.js"></script>
+  <script src="https://d3js.org/d3-collection.v1.min.js"></script>
+  <script src="https://d3js.org/d3-color.v1.min.js"></script>
+  <script src="https://d3js.org/d3-format.v1.min.js"></script>
+  <script src="https://d3js.org/d3-interpolate.v1.min.js"></script>
+  <script src="https://d3js.org/d3-time.v1.min.js"></script>
+  <script src="https://d3js.org/d3-time-format.v2.min.js"></script>
+  <script src="https://d3js.org/d3-scale.v1.min.js"></script>
+  <script src="js/d3.tip.v0.6.3.js"></script>
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/bootstrap-theme.min.css">
+  <script src="js/bootstrap.min.js"></script>
+  <style>
+    /* D3-tip 
+    Basic tip style
+    Abel at Aug/10/2016 
+    */
+    
+    .d3-tip {
+      line-height: 1;
+      font-weight: bold;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      border-radius: 2px;
+      pointer-events: none;
+    }
+    /* D3-tip
+    Creates a small triangle extender for the tooltip 
+    Abel at Aug/10/2016
+    */
+    
+    .d3-tip:after {
+      box-sizing: border-box;
+      display: inline;
+      font-size: 10px;
+      width: 100%;
+      line-height: 1;
+      color: rgba(0, 0, 0, 0.8);
+      position: absolute;
+      pointer-events: none;
+    }
+    /* Northward tooltips */
+    
+    .d3-tip.n:after {
+      content: "\25BC";
+      margin: -1px 0 0 0;
+      top: 100%;
+      left: 0;
+      text-align: center;
+    }
+    /* Eastward tooltips */
+    
+    .d3-tip.e:after {
+      content: "\25C0";
+      margin: -4px 0 0 0;
+      top: 50%;
+      left: -8px;
+    }
+    /* Southward tooltips */
+    
+    .d3-tip.s:after {
+      content: "\25B2";
+      margin: 0 0 1px 0;
+      top: -8px;
+      left: 0;
+      text-align: center;
+    }
+    /* Westward tooltips */
+    
+    .d3-tip.w:after {
+      content: "\25B6";
+      margin: -4px 0 0 -1px;
+      top: 50%;
+      left: 100%;
+    }
+    
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
+    
+    .axis text {
+      font-family: sans-serif;
+      font-size: 11px;
+    }
+    
+    .circle {
+      stroke: grey;
+      stroke-width: 0;
+      fill: #444;
+    }
+
+    .title {
+      font-size: 20px;
+    }
+
+    .chart {
+      font-size: 10px;
+    }
+    
+    .dot {
+      opacity: 1.25;
+    }
+    
+    p {
+      font-size: 18px;
+    }
+  </style>
+</head>
+
+<body>
+      <div id="gantt_chart" style="
+            height: 600px; 
+            width: 100%; 
+            overflow: scroll;">
+      </div>
+  <script>
+var TITLE_SECTIONID_WIDTH = 50,
+    PADDING = 100 + TITLE_SECTIONID_WIDTH,
+  MARGIN = 800, //default
+  PADDING_HEIGHT = 50,
+  ROW_HEIGHT = 60,
+  HEIGHT_SVG = 3000,
+  WIDTH_SVG = 1000, // default
+  WIDTH_RESIZE = 5,
+  WIDTH_RECTANGLE = 50,
+  HEIGHT_RISIZE = 5,
+  WIDTH_LEGEND = 200,
+  PADDING_LEGEND = 20,
+  PADDING_LEGEND_TEXT = 20,
+  WIDTH_LEGEND_ITEM = WIDTH_LEGEND / 3 - PADDING_LEGEND * 2,
+  HEIGHT_LEGEND_ITEM = ROW_HEIGHT / 2,
+  textLeftPadding = 5,
+  textDownPadding = WIDTH_RECTANGLE / 3.2,
+  PADDING_RECTANGLE = (ROW_HEIGHT - WIDTH_RECTANGLE) / 2,
+  WIDTH_TICK = 400,//default
+  COLOR = {
+    // Body
+    "RECT_FILL_Freeze" :"rgb(255,99,71)", // status is not 0
+    "RECT_FILL_Move" : "rgb(140,190,232)" ,// status is 0, default
+    "RECT_FILL_act0" : "grey", // status is 0, act is 0
+    "RECT_FILL_act1" : "rgb(39, 163, 221)",// status is 0, act is 1
+    "RECT_FILL_act2" : "rgb(157, 198, 45)",// status is 0, act is 2
+    "RECT_FILL_act3" : "darkblue",// status is 0, act is 3
+    "RECT_TEXT" : "black",
+    //Round
+    "RECT_FILL_ROUND_Freeze" : "lightpink",  // status is not 0
+    "RECT_FILL_ROUND_Move" : "lightgreen", // status is 0
+    // // Left
+    // "RECT_FILL_LEFT_Freeze" : "lightpink",  // status is not 0
+    // "RECT_FILL_LEFT_Move" : "lightgreen", // status is 0
+    // //right
+    // "RECT_FILL_LEFT_Freeze" : "lightpink",  // status is not 0
+    // "RECT_FILL_LEFT_Move" : "lightgreen", // status is 0 
+  },
+  LEGEND_ARRAY = [{
+    color : COLOR.RECT_FILL_act0,
+    text : "Not sure"
+  },{
+    color : COLOR.RECT_FILL_act1,
+    text : "Inbound"
+  },{
+    color : COLOR.RECT_FILL_act2,
+    text : "Outbound"
+  },{
+    color : COLOR.RECT_FILL_act3,
+    text : "Inbound & Outbound"
+  },{
+    color : COLOR.RECT_FILL_Freeze,
+    text : "Freeze"
+  },{
+    color : COLOR.RECT_FILL_Move,
+    text : "Move"
+  }],
+  latestChangeAppointment = null,
+  gatesArray = [];
+
+    //aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI
+    //mock data
+    function formatter0(number){
+        if(number < 10)
+            return "0" + number;
+        return number;
+    }
+    var aGateList = mockGates(10);
+    function mockGates(n) {
+      var list = [];
+      for (var i = 1; i <= n; i++) {
+        list.push({
+            SECTIONID : "gate" + i
+        });
+      }
+      return list;
+    }
+    var dtToday = new Date();
+    var aDateLabels = [{
+        DATEKEY : "" + dtToday.getFullYear() + formatter0(dtToday.getMonth()) + formatter0(dtToday.getDate())
+    }];
+    var aTimeLabel = mockTime(8,20,30);
+    function mockTime(startTime, endTime, lenghth){
+        var aTime = [];
+        var dtStart = new Date(dtToday.getFullYear(), dtToday.getMonth(), dtToday.getDate(),startTime);
+        var dtEnd = new Date(dtToday.getFullYear(), dtToday.getMonth(), dtToday.getDate(),endTime);
+        for(var i = dtStart; i <= dtEnd ; i.setMinutes(i.getMinutes() + lenghth)) {
+            aTime.push({
+                TIMEKEY : "" + formatter0(i.getHours()) + formatter0(i.getMinutes()) + formatter0(i.getSeconds())
+            });
+        }
+        return aTime;
+    }
+    var aAppointment = mockAppointment(5);
+    function mockAppointment(n){
+        var aAppointment = [];
+        for(var i = 0; i < n; i ++){
+            var index
+            aAppointment.push({
+                // APP_SECTIONID : randomGate(Math.ceil(Math.random()*10),Math.ceil(Math.random()*3)),
+                APP_SECTIONID : "",
+                // SR_ACT_STATE : "" + Math.floor(Math.random()*5),
+                SR_ACT_STATE : "0",
+                STARTTIME : dt2str(new Date(dtToday.getFullYear(), dtToday.getMonth(), dtToday.getDate(),Math.ceil(Math.random()*4) + 8)),
+                FINISHTIME : dt2str(new Date(dtToday.getFullYear(), dtToday.getMonth(), dtToday.getDate(),Math.ceil(Math.random()*4) + 12)),
+                PLATE : "plate" + i,
+                LOAD_WEIGHT : Math.floor(Math.random()*10000),
+                LOAD_WEIGHT_UOM : "KG",
+                LOAD_VOLUME : Math.floor(Math.random()*1000),
+                LOAD_VOLUME_UOM : "CCM",
+                ACT_DIR : "" + Math.floor(Math.random()*4),
+                TU_NUM : "" + Math.floor(Math.random()*100000),
+            });
+        }
+        return aAppointment;
+    }
+    function formatter2(num) {
+      if (num >= 10)
+        return num;
+      return "0" + num;
+    }
+    function dt2str(dt){
+        return "" + dt.getFullYear() + formatter2(dt.getMonth()) + formatter2(dt.getDate()) + formatter2(dt.getHours()) + formatter2(dt.getMinutes()) + formatter2(dt.getSeconds()); 
+    }
+    function randomGate(index,n){
+        var aGate=[];
+        for(var i = index; i < 10 && n > 0; i ++, n --){
+            aGate.push(aGateList[i].SECTIONID);
+        }
+        return aGate.join(',');
+    }
+    var oAPI=null;
+    test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI);
+
+
+function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
+    //aAppoitmentAddon with fields DOCNO, plate, weight, loadweight
+    this.appointments = aAppointment;
+    var that = this;
+    this.api = oAPI;
+    // console.log(aAppointment);
+    //  console.log(aDateLabels);
+    //  console.log(aTimeLabel);
+    if (!(aGateList.length && aDateLabels.length && aTimeLabel.length)) {
+      return;
+    }
+    WIDTH_SVG = $("#gantt_chart").width() - 10;
+    MARGIN = WIDTH_SVG - PADDING - WIDTH_LEGEND - 10;
+    var lineMax;
+    //min
+    var sDateMin = aDateLabels[0].DATEKEY;
+    var sTimeMin = aTimeLabel[0].TIMEKEY;
+    var timeMin = new Date(sDateMin.substr(0, 4), sDateMin.substr(4, 2) - 1, sDateMin.substr(6, 2), sTimeMin.substr(0, 2), sTimeMin.substr(2, 2), sTimeMin.substr(4, 2));
+    //max
+    var nTicks = aTimeLabel.length;
+    var sDateMax = aDateLabels.pop().DATEKEY;
+    var sTimeMax = aTimeLabel.pop().TIMEKEY;
+    var timeMax = new Date(sDateMax.substr(0, 4), sDateMax.substr(4, 2) - 1, sDateMax.substr(6, 2), sTimeMax.substr(0, 2), sTimeMax.substr(2, 2), sTimeMax.substr(4, 2));
+    // var timeInterval = (timeMax - timeMin) / (nTicks - 1) /1000 / 60;
+    WIDTH_TICK = MARGIN / (nTicks - 1);
+    function getGateName(aOriList) {
+      var aList = [];
+      aOriList.forEach(function(item) {
+        aList.push(item.SECTIONID);
+      });
+      return aList;
+    }
+    aGateList = getGateName(aGateList);
+    aGateList.push("dummy");
+    // var aGateList = mockGates(10);
+    // function mockGates(n) {
+    //  var list = [];
+    //  for (var i = 1; i <= n; i++) {
+    //      list.push("gate" + i);
+    //  }
+    //  return list;
+    // }
+    var intervalsBasedOnGate = [];
+    var timeScale;
+    var yGScale;
+    var gatesArray;
+    //draw
+    var svg;
+
+    function resetD3() {
+      d3.select("svg").remove();
+      svg = d3.select("#gantt_chart").append("svg")
+        .attr("style", "overflow-y:scroll !important")
+        .attr("width", WIDTH_SVG)
+        .attr("height", HEIGHT_SVG);
+    }
+    resetD3();
+    //mock data
+    
+
+    function formattTime(sTime) {
+      var year = sTime.substr(0, 4),
+        month = sTime.substr(4, 2),
+        day = sTime.substr(6, 2),
+        hour = sTime.substr(8, 2),
+        minute = sTime.substr(10, 2),
+        second = sTime.substr(12, 2);
+      return new Date(year, month - 1, day, hour, minute, second);
+    }
+    var intervals = [];
+
+    //function
+    function dragStart(d) {
+      dragStartLeft(d);
+      dragStartRight(d);
+    }
+
+    function dragStartLeft(d) {
+      svg.append("line")
+      .attr("x1", timeScale(d.startTime))
+      .attr("y1", yGScale(0))
+      .attr("x2", timeScale(d.startTime))
+      .attr("y2", yGScale(lineMax))
+      .attr("stroke", "grey")
+      .attr("stroke-width", function() {
+        d.leftLine = this;
+        return 0.5;
+      })
+      .attr("transform", "translate(" + PADDING + ", " + PADDING_HEIGHT + ")");
+    }
+
+    function dragStartRight(d) {
+      svg.append("line")
+      .attr("x1", timeScale(d.endTime))
+      .attr("y1", yGScale(0))
+      .attr("x2", timeScale(d.endTime))
+      .attr("y2", yGScale(lineMax))
+      .attr("stroke", "grey")
+      .attr("stroke-width", function() {
+        d.rightLine = this;
+        return 0.5;
+      })
+      .attr("transform", "translate(" + PADDING + ", " + PADDING_HEIGHT + ")");
+    }
+
+    function leftDragMove(d) {
+      if (d.status !== "0"){
+        return;
+      }
+      d3.select(this)
+        .attr("x", function() {
+          var x = Math.floor((d3.event.x - PADDING + WIDTH_RESIZE) / WIDTH_TICK) * WIDTH_TICK + PADDING - WIDTH_RESIZE;
+          x = Math.max(x, timeScale(timeMin) + PADDING - WIDTH_RESIZE);
+          x = Math.min(x, timeScale(d.endTime) + PADDING - WIDTH_RESIZE);
+          
+          var newXBody = x + WIDTH_RESIZE;
+          d.body.setAttribute("x", newXBody);
+          d.up.setAttribute("x", newXBody);
+          d.down.setAttribute("x", newXBody);
+
+          var newXText = x + WIDTH_RESIZE + textLeftPadding;
+          d.text1.setAttribute("x", newXText);
+          d.text2.setAttribute("x", newXText);
+          d.text3.setAttribute("x", newXText);
+
+          var newXLine = x - PADDING + WIDTH_RESIZE;
+          d.startTime = timeScale.invert(newXLine);
+          d.leftLine.setAttribute("x1", newXLine);
+          d.leftLine.setAttribute("x2", newXLine);
+
+          var newWidthBody = timeScale(d.endTime) - timeScale(d.startTime);
+          d.body.setAttribute("width", newWidthBody);
+          d.up.setAttribute("width", newWidthBody);
+          d.down.setAttribute("width", newWidthBody);
+          return x;
+        });
+    }
+
+    function rightDragMove(d) {
+      if (d.status !== "0"){
+        return;
+      }
+      d3.select(this)
+        .attr("x", function() {
+          var x = Math.floor((d3.event.x - PADDING) / WIDTH_TICK) * WIDTH_TICK + PADDING;
+          x = Math.min(x, timeScale(timeMax) + PADDING);
+          x = Math.max(x, timeScale(d.startTime) + PADDING);
+
+          var newXLine = x - PADDING;
+          d.endTime = timeScale.invert(newXLine);
+          d.rightLine.setAttribute("x1", newXLine);
+          d.rightLine.setAttribute("x2", newXLine);
+
+          var newWidthBody = timeScale(d.endTime) - timeScale(d.startTime);
+          d.body.setAttribute("width", newWidthBody);
+          d.up.setAttribute("width", newWidthBody);
+          d.down.setAttribute("width", newWidthBody);
+          return x;
+        });
+    }
+
+    function upDragMove(d) {
+      if (d.status !== "0" || d.gate === ""){
+        return;
+      }
+      d3.select(this)
+        .attr("y", function() {
+          var y = Math.floor((d3.event.y - PADDING_RECTANGLE) / ROW_HEIGHT) * ROW_HEIGHT + PADDING_HEIGHT;
+          y = Math.min(y, parseFloat(d.down.getAttribute("y")) - HEIGHT_RISIZE - WIDTH_RECTANGLE);
+          y = Math.max(y, ROW_HEIGHT + PADDING_HEIGHT);
+          // d.gate = aGateList[row2gate(yGScale.invert(y - PADDING_HEIGHT - WIDTH_RECTANGLE / 2)) - 1];
+          d.groupIndexFrom = row2gate(yGScale.invert(y - PADDING_HEIGHT - WIDTH_RECTANGLE / 2));
+          d.gate = aGateList.slice(d.groupIndexFrom, d.groupIndexTo + 1).join(",");
+          d.text1.setAttribute("y", y + textDownPadding + PADDING_RECTANGLE);
+          d.text2.setAttribute("y", y + 2 * textDownPadding + PADDING_RECTANGLE);
+          d.text3.setAttribute("y", y + 3 * textDownPadding + PADDING_RECTANGLE);
+          var newY = y + HEIGHT_RISIZE
+          d.body.setAttribute("y", newY);
+          d.left.setAttribute("y", newY);
+          d.right.setAttribute("y", newY);
+          var newHeight = d.down.getAttribute("y") - y - HEIGHT_RISIZE;
+          d.body.setAttribute("height", newHeight);
+          d.left.setAttribute("height", newHeight);
+          d.right.setAttribute("height", newHeight);
+          return y;
+        });
+    }
+
+    function downDragMove(d) {
+      if (d.status !== "0" || d.gate === ""){
+        return;
+      }
+      d3.select(this)
+        .attr("y", function() {
+          var y = Math.floor((d3.event.y + PADDING_RECTANGLE) / ROW_HEIGHT) * ROW_HEIGHT - PADDING_RECTANGLE + PADDING_HEIGHT;
+          y = Math.max(y, parseFloat(d.up.getAttribute("y")) + HEIGHT_RISIZE + WIDTH_RECTANGLE);
+          d.groupIndexTo = row2gate(yGScale.invert(y - PADDING_HEIGHT - WIDTH_RECTANGLE / 2));
+          d.gate = aGateList.slice(d.groupIndexFrom, d.groupIndexTo ).join(",");
+          var newHeight = y - d.up.getAttribute("y") - HEIGHT_RISIZE;
+          d.body.setAttribute("height", newHeight);
+          d.left.setAttribute("height", newHeight);
+          d.right.setAttribute("height", newHeight);
+          return y;
+        });
+    }
+
+    function row2gate(nRow) {
+      for (var i = 0; i < gatesArray.length; i ++) {
+        nRow -= gatesArray[i];
+        if (nRow <= 0) {
+          return i;
+        }
+      }
+      return gatesArray.length - 1;
+    }
+
+    function dragmove(d) {
+      if (d.status !== "0"){
+        return;
+      }
+      d3.select(this)
+        .attr("x", function() {
+          var x = Math.floor((d3.event.x - PADDING - d.width / 2) / WIDTH_TICK) * WIDTH_TICK + PADDING + d.width / 2;
+          //left side
+          x = Math.max(x, timeScale(timeMin) + PADDING + d.width / 2);
+          //right side
+          x = Math.min(x, timeScale(timeMax) + PADDING - d.width / 2);
+          d.startTime = timeScale.invert(x - d.width / 2 - PADDING);
+          d.endTime = timeScale.invert(x + d.width / 2 - PADDING);
+          // d.text1.setAttribute("x", x - (d.width) / 2 + WIDTH_RESIZE + textLeftPadding);
+          // d.text2.setAttribute("x", x - (d.width) / 2 + WIDTH_RESIZE + textLeftPadding);
+          // d.text3.setAttribute("x", x - (d.width) / 2 + WIDTH_RESIZE + textLeftPadding);
+          d.leftLine.setAttribute("x1", x - (d.width) / 2 - PADDING);
+          d.leftLine.setAttribute("x2", x - (d.width) / 2 - PADDING);
+          d.rightLine.setAttribute("x1", x + (d.width) / 2 - PADDING);
+          d.rightLine.setAttribute("x2", x + (d.width) / 2 - PADDING);
+          return x - d.width / 2;
+        })
+        .attr("y", function() {
+          var y = Math.floor((d3.event.y - PADDING_RECTANGLE - PADDING_HEIGHT) / ROW_HEIGHT) * ROW_HEIGHT + PADDING_RECTANGLE + PADDING_HEIGHT;
+          // d.gate = aGateList[row2gate(yGScale.invert(y - PADDING_HEIGHT - WIDTH_RECTANGLE / 2)) - 1];
+          d.groupIndexFrom = row2gate(yGScale.invert(y - PADDING_HEIGHT - WIDTH_RECTANGLE / 2));
+          d.groupIndexTo = d.groupIndexFrom;
+          d.gate = aGateList[d.groupIndexFrom] !== "dummy" ? aGateList[d.groupIndexFrom] : "";
+          d.text1.setAttribute("y", y + textDownPadding);
+          d.text2.setAttribute("y", y + 2 * textDownPadding);
+          d.text3.setAttribute("y", y + 3 * textDownPadding);
+          return y;
+        })
+        .attr("height", WIDTH_RECTANGLE);
+      d3.selectAll(".rectleft").remove();
+      d3.selectAll(".rectright").remove();
+      d3.selectAll(".rectup").remove();
+      d3.selectAll(".rectdown").remove();
+      d3.selectAll(".content").remove();
+    }
+
+    function formatter2(num) {
+      if (num >= 10){
+        return num;
+      }
+      return "0" + num;
+  }
+
+    function time2string(dt) {
+      var month = dt.getMonth(),
+        date = dt.getDate(),
+        hour = dt.getHours(),
+        minute = dt.getMinutes(),
+        second = dt.getSeconds();
+      return "" + dt.getFullYear() +
+        formatter2(month + 1) +
+        formatter2(date) +
+        formatter2(hour) +
+        formatter2(minute) +
+        formatter2(second);
+    }
+    function isOverlap(a, b){
+        if(a.getAttribute("x") < b.getAttribute("x") - a.getAttribute("width") //left
+            || b.getAttribute("x") < a.getAttribute("x") - b.getAttribute("width") //right
+            || a.getAttribute("y") < b.getAttribute("y") - a.getAttribute("height") //up
+            || b.getAttribute("y") < a.getAttribute("y") - b.getAttribute("height") //down
+        ){
+            return false;
+        }
+        return true;
+    }
+    function checkAvailable(d){
+        //set to dummy
+        if(d.gate === ""){
+            return true;
+        }
+        //check overlap
+        for(var i = 0; i < intervals.length; i ++ ){
+            //except itself
+            if(intervals[i] === d){
+                continue;
+            }
+            if(isOverlap(intervals[i].body, d.body)){
+                return false;
+            }
+        }
+        //default
+        return true;
+    }
+    function showDrag(d){
+        this.style.opacity = 0.8;
+    }
+    function hideDrag(d){
+        this.style.opacity = 0;
+    }
+    function dragend(d) {
+      if(checkAvailable(d)){
+        d.source.STARTTIME = time2string(d.startTime);
+        d.source.FINISHTIME = time2string(d.endTime);
+        d.source.APP_SECTIONID = d.gate;
+        latestChangeAppointment = d;
+      }
+      resetD3();
+      drawGantt();
+    }
+    //drag
+    var drag = d3.behavior.drag()
+      .on("dragstart", dragStart)
+      .on("drag", dragmove)
+      .on("dragend", dragend);
+    var dragleft = d3.behavior.drag()
+      .on("dragstart", dragStartLeft)
+      .on("drag", leftDragMove)
+      .on("dragend", dragend);
+    var dragright = d3.behavior.drag()
+      .on("dragstart", dragStartRight)
+      .on("drag", rightDragMove)
+      .on("dragend", dragend);
+    var dragup = d3.behavior.drag()
+      .on("drag", upDragMove)
+      .on("dragend", dragend);
+    var dragdown = d3.behavior.drag()
+      .on("drag", downDragMove)
+      .on("dragend", dragend);
+
+    //generate data in gantt chart from input data
+    function generateData() {
+      intervals = [];
+        aAppointment.forEach(function(item) {
+          var startTime = formattTime(item.STARTTIME),
+            endTime = formattTime(item.FINISHTIME);
+          var status = item.SR_ACT_STATE;
+          if (startTime > timeMax || endTime < timeMin)
+            return;
+          if (timeMin > startTime) {
+            startTime = timeMin;
+            status = "4";
+            item.SR_ACT_STATE = "4";
+          }
+          if (timeMax < endTime) {
+            endTime = timeMax;
+            status = "4";
+            item.SR_ACT_STATE = "4";
+          }
+          intervals.push({
+            gate: item.APP_SECTIONID,
+            startTime: startTime,
+            endTime: endTime,
+            status: status,
+            plate: item.PLATE,
+            weight: item.LOAD_WEIGHT,
+            weight_uom: item.LOAD_WEIGHT_UOM,
+            volume: item.LOAD_VOLUME,
+            volume_uom: item.LOAD_VOLUME_UOM,
+            act: item.ACT_DIR,
+            source: item,
+            TU : item.TU_NUM
+              //moveable : item.XXX,
+              //plate: item.plate,
+              //sum: item.sum,
+              //weight: item.weight
+          });
+        });
+      // aGateList.push("dummy");
+      for (var i in aGateList) {
+        intervalsBasedOnGate[aGateList[i]] = [];
+      }
+      for (var i in intervals) {
+        if(intervals[i].gate){
+            // intervalsBasedOnGate[intervals[i].gate].push(intervals[i]);
+            var aGates = intervals[i].gate.split(",");
+            intervalsBasedOnGate[aGates[0]].push(intervals[i]);
+            // intervals[i].group = aGates.length;
+            intervals[i].groupIndexFrom = aGateList.indexOf(aGates[0]);
+            intervals[i].groupIndexTo = aGateList.indexOf(aGates.pop());
+        } else {
+            intervalsBasedOnGate['dummy'].push(intervals[i]);
+            intervals[i].group = 1;
+        }
+      }
+      var count = 0;
+      gatesArray = [];
+      var k = 0;
+      for (var key in intervalsBasedOnGate) {
+        count++;
+        gatesArray[k] = 1;
+        //sort
+        /*
+                        intervalsBasedOnGate[key].sort(function(a, b) {
+                            if (a.startTime === b.startTime) {
+                                return a.endTime > b.endTime;
+                            }
+                            return a.startTime > b.startTime;
+                        });
+                        */
+        for (var i = 0; i < intervalsBasedOnGate[key].length - 1; i++) {
+          var min = i;
+          for (var j = i + 1; j < intervalsBasedOnGate[key].length; j++) {
+            if (intervalsBasedOnGate[key][j].startTime < intervalsBasedOnGate[key][min].startTime)
+            {
+              min = j;
+            }
+          }
+          if (min !== i) {
+            var temp = intervalsBasedOnGate[key][i];
+            intervalsBasedOnGate[key][i] = intervalsBasedOnGate[key][min];
+            intervalsBasedOnGate[key][min] = temp;
+          }
+        }
+        //group 
+        var rowGroup = [{
+          endTime: new Date(0),
+          row: count
+        }];
+        for (var i in intervalsBasedOnGate[key]) {
+          var newRow = true;
+          for (var j in rowGroup) {
+            if (rowGroup[j].endTime <= intervalsBasedOnGate[key][i].startTime) {
+              newRow = false;
+              intervalsBasedOnGate[key][i].row = rowGroup[j].row;
+              rowGroup[j].endTime = intervalsBasedOnGate[key][i].endTime;
+              break;
+            }
+          }
+          if (newRow) {
+            intervalsBasedOnGate[key][i].row = ++count;
+            rowGroup.push({
+              endTime: intervalsBasedOnGate[key][i].endTime,
+              row: count
+            });
+            gatesArray[k]++;
+          }
+        }
+        k++;
+      }
+      // Draw Axis
+      //简体中文本地化
+        var zh = d3.locale({
+            decimal: ".",
+            thousands: ",",
+            grouping: [3],
+            currency: ["¥", ""],
+            dateTime: "%a %b %e %X %Y",
+            date: "%Y/%-m/%-d",
+            time: "%H:%M:%S",
+            periods: ["上午", "下午"],
+            days: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"],
+            shortDays: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"],
+            months: ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"],
+            shortMonths: ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"]
+        });
+      var numOfGates = count;
+      timeScale = d3.scaleTime().domain([timeMin, timeMax]).range([0, MARGIN]);
+      // var xTAxis = d3.svg.axis().scale(timeScale).ticks(Math.min(nTicks, 10));
+      var xTAxis = d3.svg.axis()
+        .scale(timeScale)
+        .ticks(nTicks)
+        //.tickSize(12,20)
+        .tickFormat(zh.timeFormat("%H:%M"));
+      svg.append("g")
+        .attr("class", "axis")
+        .attr("transform", "translate(" + PADDING + ", " + PADDING_HEIGHT + ")")
+        .call(xTAxis);
+    d3.selectAll('g.tick text').attr('transform','translate(20,20)rotate(60)');
+      yGScale = d3.scale.linear()
+        .domain([0, numOfGates])
+        .range([0, numOfGates * ROW_HEIGHT]);
+      d3.svg.axis().scale(yGScale).orient("left");
+    }
+
+    function drawGantt() {
+      generateData();
+      var i = 1;
+      var g = 0;
+      //line
+      for (var index in aGateList) {
+        svg.append("line")
+          .attr("class", "chart")
+          .attr("x1", 0)
+          .attr("y1", yGScale(i))
+          .attr("x2", MARGIN)
+          .attr("y2", yGScale(i))
+          .attr("stroke", "black")
+          .attr("stroke-width", 1)
+          .attr("transform", "translate(" + PADDING + ", " + PADDING_HEIGHT + ")");
+        svg.append("text")
+          .attr("class", "chart")
+          .attr("y", yGScale(i) + ROW_HEIGHT / 2)
+          .attr("transform", "translate(" + TITLE_SECTIONID_WIDTH + ", " + PADDING_HEIGHT + ")")
+          .text(aGateList[index])
+        i += gatesArray[g];
+        g++;
+      }
+      svg.append("line")
+        .attr("class", "chart")
+        .attr("x1", 0)
+        .attr("y1", yGScale(i))
+        .attr("x2", MARGIN)
+        .attr("y2", yGScale(i))
+        .attr("stroke", "black")
+        .attr("stroke-width", 1)
+        .attr("transform", "translate(" + PADDING + ", " + PADDING_HEIGHT + ")");
+      lineMax = i;
+      //Title
+      // SECTION ID
+      svg.append("text")
+          .attr("class", "title")
+          .attr("transform", "translate(" + TITLE_SECTIONID_WIDTH / 2 + ", " + 270 + ")rotate(270)")
+          .text("SECTION ID");
+      // TIME
+      svg.append("text")
+          .attr("class", "title")
+          .attr("transform", "translate(" + WIDTH_SVG / 2 + ", " + PADDING_HEIGHT / 2 + ")")
+          .text("TIME");
+      //text
+      svg.selectAll("text.plate")
+      .data(intervals)
+      .enter()
+      .append("text")
+      .attr("class", "content")
+      .style("fill", COLOR.RECT_TEXT)
+      .text(function(d) {
+        return d.plate;
+        //return "123";
+      })
+      .style("font-size", "" + textDownPadding)
+      .attr("x", function(d) {
+        d.text1 = this;
+        return timeScale(d.startTime) + PADDING + textLeftPadding;
+      })
+      .attr("y", function(d) {
+        return yGScale(d.row) + PADDING_HEIGHT + PADDING_RECTANGLE + textDownPadding;
+      });
+      svg.selectAll("text.plate2")
+      .data(intervals)
+      .enter()
+      .append("text")
+      .attr("class", "content")
+      .style("fill", COLOR.RECT_TEXT)
+      .text(function(d) {
+        return "W:" + d.weight + d.weight_uom;
+      })
+      .style("font-size", "" + textDownPadding)
+      .attr("x", function(d) {
+        d.text2 = this;
+        return timeScale(d.startTime) + PADDING + textLeftPadding;
+      })
+      .attr("y", function(d) {
+        return yGScale(d.row) + PADDING_HEIGHT + PADDING_RECTANGLE + 2 * textDownPadding;
+      });
+      svg.selectAll("text.plate3")
+      .data(intervals)
+      .enter()
+      .append("text")
+      .attr("class", "content")
+      .style("fill", COLOR.RECT_TEXT)
+      .text(function(d) {
+        return "V:" + d.volume + d.volume_uom;
+      })
+      .style("font-size", "" + textDownPadding)
+      .attr("x", function(d) {
+        d.text3 = this;
+        return timeScale(d.startTime) + PADDING + textLeftPadding;
+      })
+      .attr("y", function(d) {
+        return yGScale(d.row) + PADDING_HEIGHT + PADDING_RECTANGLE + 3 * textDownPadding;
+      });
+      //text ends 
+      //rect
+      //body
+      svg.selectAll("rect")
+        .data(intervals)
+        .enter()
+        .append("rect")
+        .attr("class", "rect")
+        .style("fill", function(d) {
+          if (d.status !== "0") {
+            return COLOR.RECT_FILL_Freeze;
+          } else {
+            if (d.act)
+              return COLOR["RECT_FILL_act" + d.act];
+            else
+              return COLOR.RECT_FILL_Move;
+          }
+        })
+        .style("opacity", 0.5)
+        .attr("x", function(d) {
+          d.body = this;
+          return timeScale(d.startTime) + PADDING;
+        })
+        .attr("y", function(d) {
+          return yGScale(d.row) + PADDING_HEIGHT + PADDING_RECTANGLE;
+        })
+        .attr("width", function(d) {
+          d.width = timeScale(d.endTime) - timeScale(d.startTime);
+          return d.width;
+        })
+        .attr("height", function(d){
+            return WIDTH_RECTANGLE + (d.gate.split(",").length > 1 ? eval(gatesArray.slice(d.groupIndexFrom,d.groupIndexTo).join('+')) : 0) * ROW_HEIGHT;
+        })
+        .attr("cursor", "move")
+        .on('mouseover', tipContent.show)
+        .on('mouseout', tipContent.hide)
+        // .on("dblclick",function(){
+        //     alert(123);
+        // })
+        .call(drag);
+        //left
+      svg.selectAll("rect.left")
+        .data(intervals)
+        .enter()
+        .append("rect")
+        .attr("class", "rectleft")
+        .style("fill", function(d) {
+          if (d.status !== "0") {
+            return COLOR.RECT_FILL_ROUND_Freeze;
+          } else {
+            return COLOR.RECT_FILL_ROUND_Move;
+          }
+        })
+        .style("opacity", 0)
+        .attr("x", function(d) {
+          d.left = this;
+          return timeScale(d.startTime) + PADDING - WIDTH_RESIZE;
+        })
+        .attr("y", function(d) {
+          return yGScale(d.row) + PADDING_HEIGHT + PADDING_RECTANGLE;
+        })
+        .attr("width", function(d) {
+          return WIDTH_RESIZE;
+        })
+        .attr("height", function(d){
+            return WIDTH_RECTANGLE + (d.gate.split(",").length > 1 ? eval(gatesArray.slice(d.groupIndexFrom,d.groupIndexTo).join('+')) : 0) * ROW_HEIGHT;
+        })
+        .attr("cursor", "ew-resize")
+        .on('mouseover', showDrag)
+        .on('mouseout', hideDrag)
+        .call(dragleft);
+        //right
+      svg.selectAll("rect.right")
+        .data(intervals)
+        .enter()
+        .append("rect")
+        .attr("class", "rectright")
+        .style("fill", function(d) {
+          if (d.status !== "0") {
+            return COLOR.RECT_FILL_ROUND_Freeze;
+          } else {
+            return COLOR.RECT_FILL_ROUND_Move;
+          }
+        })
+        .style("opacity", 0)
+        .attr("x", function(d) {
+          d.right = this;
+          return timeScale(d.endTime) + PADDING;
+        })
+        .attr("y", function(d) {
+          return yGScale(d.row) + PADDING_HEIGHT + PADDING_RECTANGLE;
+        })
+        .attr("width", function(d) {
+          return WIDTH_RESIZE;
+        })
+        .attr("height", function(d){
+            return WIDTH_RECTANGLE + (d.gate.split(",").length > 1 ? eval(gatesArray.slice(d.groupIndexFrom,d.groupIndexTo).join('+')) : 0) * ROW_HEIGHT;
+        })
+        .attr("cursor", "ew-resize")
+        .on('mouseover', showDrag)
+        .on('mouseout', hideDrag)
+        .call(dragright);
+        //up
+      svg.selectAll("rect.up")
+        .data(intervals)
+        .enter()
+        .append("rect")
+        .attr("class", "rectup")
+        .style("fill", function(d){
+          if (d.status !== "0") {
+            return COLOR.RECT_FILL_ROUND_Freeze;
+          } else {
+            return COLOR.RECT_FILL_ROUND_Move;
+          }
+        })
+        .style("opacity", 0)
+        .attr("x", function(d) {
+          d.up = this;
+          return timeScale(d.startTime) + PADDING;
+        })
+        .attr("y", function(d) {
+          return yGScale(d.row) + PADDING_HEIGHT + PADDING_RECTANGLE - HEIGHT_RISIZE;
+        })
+        .attr("width", function(d) {
+          return d.width;
+        })
+        .attr("height", HEIGHT_RISIZE)
+        .attr("cursor", "ns-resize")
+        .on('mouseover', showDrag)
+        .on('mouseout', hideDrag)
+        .call(dragup);
+        //down
+      svg.selectAll("rect.down")
+        .data(intervals)
+        .enter()
+        .append("rect")
+        .attr("class", "rectdown")
+        .style("fill", function(d){
+          if (d.status !== "0") {
+            return COLOR.RECT_FILL_ROUND_Freeze;
+          } else {
+            return COLOR.RECT_FILL_ROUND_Move;
+          }
+        })
+        .style("opacity", 0)
+        .attr("x", function(d) {
+          d.down = this;
+          return timeScale(d.startTime) + PADDING;
+        })
+        .attr("y", function(d) {
+          return yGScale(d.row) + PADDING_HEIGHT + (ROW_HEIGHT + WIDTH_RECTANGLE) / 2 + (d.gate.split(",").length > 1 ? eval(gatesArray.slice(d.groupIndexFrom,d.groupIndexTo).join('+')) : 0) * ROW_HEIGHT;
+        })
+        .attr("width", function(d) {
+          return d.width;
+        })
+        .attr("height", HEIGHT_RISIZE)
+        .attr("cursor", "ns-resize")
+        .on('mouseover', showDrag)
+        .on('mouseout', hideDrag)
+        .call(dragdown);
+        //legend
+        //rect
+      svg.selectAll("legend")
+        .data(LEGEND_ARRAY)
+        .enter()
+        .append("rect")
+        .style("opacity", 0.5)
+        .style("fill", function(d){
+          return d.color;
+        })
+        .attr("x", MARGIN + PADDING + PADDING_LEGEND)
+        .attr("y", function(d) {
+          return PADDING_HEIGHT + ROW_HEIGHT + PADDING_LEGEND + LEGEND_ARRAY.indexOf(d) * (HEIGHT_LEGEND_ITEM + PADDING_LEGEND);
+        }) 
+        .attr("width", function(d) {
+          return WIDTH_LEGEND_ITEM;
+        })
+        .attr("height", HEIGHT_LEGEND_ITEM);
+        //description
+      svg.selectAll("text.legend")
+      .data(LEGEND_ARRAY)
+      .enter()
+      .append("text")
+      // .attr("class", "content")
+      .style("fill", COLOR.RECT_TEXT)
+      .text(function(d) {
+        return d.text;
+      })
+      .attr("x", MARGIN + PADDING + WIDTH_LEGEND / 3)
+      .attr("y", function(d) {
+        return PADDING_HEIGHT + ROW_HEIGHT + PADDING_LEGEND + PADDING_LEGEND_TEXT + LEGEND_ARRAY.indexOf(d) * (HEIGHT_LEGEND_ITEM + PADDING_LEGEND);
+      });
+      if(latestChangeAppointment){
+        // TBD
+       // tipLastChanged.show();
+      }       
+      return;
+    }
+
+    var tipContent = d3.tip()
+        .attr('class', 'd3-tip')
+        .html(function(d) {
+            return "<span style='color:red'>TU: " + d.TU + "</span>";
+        });
+    svg.call(tipContent);
+
+    // var tipLastChanged = d3.tip()
+    //     .attr('class', 'd3-tip')
+    //     .html(function(d) {
+    //         return "<span style='color:red'>Test</span>";
+    //     });
+    // svg.call(tipLastChanged);
+    drawGantt();
+}
+  </script>
+</body>
+
+</html>
