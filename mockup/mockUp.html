@@ -198,7 +198,7 @@ var TITLE_SECTIONID_WIDTH = 50,
             return "0" + number;
         return number;
     }
-    var aGateList = mockGates(10);
+    var aGateList = mockGates(5);
     function mockGates(n) {
       var list = [];
       for (var i = 1; i <= n; i++) {
@@ -232,8 +232,8 @@ var TITLE_SECTIONID_WIDTH = 50,
             aAppointment.push({
                 // APP_SECTIONID : randomGate(Math.ceil(Math.random()*10),Math.ceil(Math.random()*3)),
                 APP_SECTIONID : "",
-                // SR_ACT_STATE : "" + Math.floor(Math.random()*5),
-                SR_ACT_STATE : "0",
+                SR_ACT_STATE : "" + Math.floor(Math.random()*5),
+                // SR_ACT_STATE : "0",
                 STARTTIME : dt2str(new Date(dtToday.getFullYear(), dtToday.getMonth(), dtToday.getDate(),Math.ceil(Math.random()*4) + 8)),
                 FINISHTIME : dt2str(new Date(dtToday.getFullYear(), dtToday.getMonth(), dtToday.getDate(),Math.ceil(Math.random()*4) + 12)),
                 PLATE : "plate" + i,
@@ -241,7 +241,7 @@ var TITLE_SECTIONID_WIDTH = 50,
                 LOAD_WEIGHT_UOM : "KG",
                 LOAD_VOLUME : Math.floor(Math.random()*1000),
                 LOAD_VOLUME_UOM : "CCM",
-                ACT_DIR : "" + Math.floor(Math.random()*4),
+                ACT_DIR : "" + Math.floor(Math.random()*2 + 1),
                 TU_NUM : "" + Math.floor(Math.random()*100000),
             });
         }
