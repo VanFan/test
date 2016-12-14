@@ -105,6 +105,10 @@
     .chart {
       font-size: 10px;
     }
+
+    .content {
+      font-size: 10px;
+    }
     
     .dot {
       opacity: 1.25;
@@ -144,16 +148,16 @@ var TITLE_SECTIONID_WIDTH = 50,
   WIDTH_TICK = 400,//default
   COLOR = {
     // Body
-    "RECT_FILL_Freeze" :"rgb(255,99,71)", // status is not 0
-    "RECT_FILL_Move" : "rgb(140,190,232)" ,// status is 0, default
+    "RECT_FILL_Freeze" :"red", // status is not 0
+    "RECT_FILL_Move" : "green" ,// status is 0, default
     "RECT_FILL_act0" : "grey", // status is 0, act is 0
     "RECT_FILL_act1" : "rgb(39, 163, 221)",// status is 0, act is 1
     "RECT_FILL_act2" : "rgb(157, 198, 45)",// status is 0, act is 2
     "RECT_FILL_act3" : "darkblue",// status is 0, act is 3
     "RECT_TEXT" : "black",
     //Round
-    "RECT_FILL_ROUND_Freeze" : "lightpink",  // status is not 0
-    "RECT_FILL_ROUND_Move" : "lightgreen", // status is 0
+    // "RECT_FILL_ROUND_Freeze" : "lightpink",  // status is not 0
+    // "RECT_FILL_ROUND_Move" : "lightgreen", // status is 0
     // // Left
     // "RECT_FILL_LEFT_Freeze" : "lightpink",  // status is not 0
     // "RECT_FILL_LEFT_Move" : "lightgreen", // status is 0
@@ -161,26 +165,30 @@ var TITLE_SECTIONID_WIDTH = 50,
     // "RECT_FILL_LEFT_Freeze" : "lightpink",  // status is not 0
     // "RECT_FILL_LEFT_Move" : "lightgreen", // status is 0 
   },
-  LEGEND_ARRAY = [{
-    color : COLOR.RECT_FILL_act0,
-    text : "Not sure"
-  },{
+  LEGEND_CONTENT = [
+  // {
+  //   color : COLOR.RECT_FILL_act0,
+  //   text : "Not sure"
+  // },
+  {
     color : COLOR.RECT_FILL_act1,
-    text : "Inbound"
+    text : "进货"
   },{
     color : COLOR.RECT_FILL_act2,
-    text : "Outbound"
-  },{
-    color : COLOR.RECT_FILL_act3,
-    text : "Inbound & Outbound"
-  },{
+    text : "出货"
+  },
+  // {
+  //   color : COLOR.RECT_FILL_act3,
+  //   text : "Inbound & Outbound"
+  // }
+  ],
+  LEGEND_BORDER = [{
     color : COLOR.RECT_FILL_Freeze,
-    text : "Freeze"
+    text : "不可移动"
   },{
     color : COLOR.RECT_FILL_Move,
-    text : "Move"
+    text : "可移动"
   }],
-  latestChangeAppointment = null,
   gatesArray = [];
 
     //aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI
@@ -282,6 +290,7 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
     var sTimeMax = aTimeLabel.pop().TIMEKEY;
     var timeMax = new Date(sDateMax.substr(0, 4), sDateMax.substr(4, 2) - 1, sDateMax.substr(6, 2), sTimeMax.substr(0, 2), sTimeMax.substr(2, 2), sTimeMax.substr(4, 2));
     // var timeInterval = (timeMax - timeMin) / (nTicks - 1) /1000 / 60;
+    // var latestChangeAppointment = null;
     WIDTH_TICK = MARGIN / (nTicks - 1);
     function getGateName(aOriList) {
       var aList = [];
@@ -309,6 +318,7 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
 
     function resetD3() {
       d3.select("svg").remove();
+      d3.selectAll(".d3-tip").remove();
       svg = d3.select("#gantt_chart").append("svg")
         .attr("style", "overflow-y:scroll !important")
         .attr("width", WIDTH_SVG)
@@ -375,8 +385,8 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
           
           var newXBody = x + WIDTH_RESIZE;
           d.body.setAttribute("x", newXBody);
-          d.up.setAttribute("x", newXBody);
-          d.down.setAttribute("x", newXBody);
+          d.up.setAttribute("x", x);
+          d.down.setAttribute("x", x);
 
           var newXText = x + WIDTH_RESIZE + textLeftPadding;
           d.text1.setAttribute("x", newXText);
@@ -390,8 +400,8 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
 
           var newWidthBody = timeScale(d.endTime) - timeScale(d.startTime);
           d.body.setAttribute("width", newWidthBody);
-          d.up.setAttribute("width", newWidthBody);
-          d.down.setAttribute("width", newWidthBody);
+          d.up.setAttribute("width", newWidthBody + WIDTH_RESIZE * 2);
+          d.down.setAttribute("width", newWidthBody + WIDTH_RESIZE * 2);
           return x;
         });
     }
@@ -413,8 +423,8 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
 
           var newWidthBody = timeScale(d.endTime) - timeScale(d.startTime);
           d.body.setAttribute("width", newWidthBody);
-          d.up.setAttribute("width", newWidthBody);
-          d.down.setAttribute("width", newWidthBody);
+          d.up.setAttribute("width", newWidthBody + WIDTH_RESIZE * 2 );
+          d.down.setAttribute("width", newWidthBody + WIDTH_RESIZE * 2);
           return x;
         });
     }
@@ -536,10 +546,10 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         formatter2(second);
     }
     function isOverlap(a, b){
-        if(a.getAttribute("x") < b.getAttribute("x") - a.getAttribute("width") //left
-            || b.getAttribute("x") < a.getAttribute("x") - b.getAttribute("width") //right
-            || a.getAttribute("y") < b.getAttribute("y") - a.getAttribute("height") //up
-            || b.getAttribute("y") < a.getAttribute("y") - b.getAttribute("height") //down
+        if(a.getAttribute("x") <= b.getAttribute("x") - a.getAttribute("width") //left
+            || b.getAttribute("x") <= a.getAttribute("x") - b.getAttribute("width") //right
+            || a.getAttribute("y") <= b.getAttribute("y") - a.getAttribute("height") //up
+            || b.getAttribute("y") <= a.getAttribute("y") - b.getAttribute("height") //down
         ){
             return false;
         }
@@ -563,18 +573,25 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         //default
         return true;
     }
-    function showDrag(d){
-        this.style.opacity = 0.8;
+    function colorOfResize(d){
+      if (d.status !== "0") {
+        return COLOR.RECT_FILL_Freeze;
+      } else {
+        return COLOR.RECT_FILL_Move;
+      }
     }
-    function hideDrag(d){
-        this.style.opacity = 0;
-    }
+    // function showDrag(d){
+    //     this.style.opacity = 0.8;
+    // }
+    // function hideDrag(d){
+    //     this.style.opacity = 0;
+    // }
     function dragend(d) {
       if(checkAvailable(d)){
         d.source.STARTTIME = time2string(d.startTime);
         d.source.FINISHTIME = time2string(d.endTime);
         d.source.APP_SECTIONID = d.gate;
-        latestChangeAppointment = d;
+        // latestChangeAppointment = d;
       }
       resetD3();
       drawGantt();
@@ -746,6 +763,21 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
 
     function drawGantt() {
       generateData();
+      //tip
+      var tipContent = d3.tip()
+        .attr('class', 'd3-tip')
+        .html(function(d) {
+            return "<span style='color:red'>TU: " + d.TU + "</span>";
+        });
+    svg.call(tipContent);
+
+    // var tipLastChanged = d3.tip()
+    //     .direction('e')
+    //     .attr('class', 'd3-tip')
+    //     .html(function(d) {
+    //         return "<button onclick='singleSubmit()'>Save</button>";
+    //     });
+    // svg.call(tipLastChanged);
       var i = 1;
       var g = 0;
       //line
@@ -782,12 +814,12 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
       svg.append("text")
           .attr("class", "title")
           .attr("transform", "translate(" + TITLE_SECTIONID_WIDTH / 2 + ", " + 270 + ")rotate(270)")
-          .text("SECTION ID");
+          .text("班组号");
       // TIME
       svg.append("text")
           .attr("class", "title")
-          .attr("transform", "translate(" + WIDTH_SVG / 2 + ", " + PADDING_HEIGHT / 2 + ")")
-          .text("TIME");
+          .attr("transform", "translate(" + (MARGIN / 2 + PADDING - 200) + ", " + PADDING_HEIGHT / 2 + ")")
+          .text(timeMin.toLocaleString() + "   ~   " + timeMax.toLocaleString());
       //text
       svg.selectAll("text.plate")
       .data(intervals)
@@ -799,7 +831,7 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         return d.plate;
         //return "123";
       })
-      .style("font-size", "" + textDownPadding)
+      // .style("font-size", "" + textDownPadding)
       .attr("x", function(d) {
         d.text1 = this;
         return timeScale(d.startTime) + PADDING + textLeftPadding;
@@ -814,9 +846,9 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
       .attr("class", "content")
       .style("fill", COLOR.RECT_TEXT)
       .text(function(d) {
-        return "W:" + d.weight + d.weight_uom;
+        return "重量:" + d.weight + d.weight_uom;
       })
-      .style("font-size", "" + textDownPadding)
+      // .style("font-size", "" + textDownPadding)
       .attr("x", function(d) {
         d.text2 = this;
         return timeScale(d.startTime) + PADDING + textLeftPadding;
@@ -831,9 +863,9 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
       .attr("class", "content")
       .style("fill", COLOR.RECT_TEXT)
       .text(function(d) {
-        return "V:" + d.volume + d.volume_uom;
+        return "体积:" + d.volume + d.volume_uom;
       })
-      .style("font-size", "" + textDownPadding)
+      // .style("font-size", "" + textDownPadding)
       .attr("x", function(d) {
         d.text3 = this;
         return timeScale(d.startTime) + PADDING + textLeftPadding;
@@ -850,14 +882,15 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         .append("rect")
         .attr("class", "rect")
         .style("fill", function(d) {
-          if (d.status !== "0") {
-            return COLOR.RECT_FILL_Freeze;
-          } else {
-            if (d.act)
+          // if (d.status !== "0") {
+          //   return COLOR.RECT_FILL_Freeze;
+          // } else {
+            if (d.act){
               return COLOR["RECT_FILL_act" + d.act];
-            else
+            }
+            else{
               return COLOR.RECT_FILL_Move;
-          }
+            }
         })
         .style("opacity", 0.5)
         .attr("x", function(d) {
@@ -887,14 +920,8 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         .enter()
         .append("rect")
         .attr("class", "rectleft")
-        .style("fill", function(d) {
-          if (d.status !== "0") {
-            return COLOR.RECT_FILL_ROUND_Freeze;
-          } else {
-            return COLOR.RECT_FILL_ROUND_Move;
-          }
-        })
-        .style("opacity", 0)
+        .style("fill", colorOfResize)
+        .style("opacity", 0.8)
         .attr("x", function(d) {
           d.left = this;
           return timeScale(d.startTime) + PADDING - WIDTH_RESIZE;
@@ -902,15 +929,13 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         .attr("y", function(d) {
           return yGScale(d.row) + PADDING_HEIGHT + PADDING_RECTANGLE;
         })
-        .attr("width", function(d) {
-          return WIDTH_RESIZE;
-        })
+        .attr("width",WIDTH_RESIZE)
         .attr("height", function(d){
             return WIDTH_RECTANGLE + (d.gate.split(",").length > 1 ? eval(gatesArray.slice(d.groupIndexFrom,d.groupIndexTo).join('+')) : 0) * ROW_HEIGHT;
         })
         .attr("cursor", "ew-resize")
-        .on('mouseover', showDrag)
-        .on('mouseout', hideDrag)
+        // .on('mouseover', showDrag)
+        // .on('mouseout', hideDrag)
         .call(dragleft);
         //right
       svg.selectAll("rect.right")
@@ -918,14 +943,8 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         .enter()
         .append("rect")
         .attr("class", "rectright")
-        .style("fill", function(d) {
-          if (d.status !== "0") {
-            return COLOR.RECT_FILL_ROUND_Freeze;
-          } else {
-            return COLOR.RECT_FILL_ROUND_Move;
-          }
-        })
-        .style("opacity", 0)
+        .style("fill",colorOfResize)
+        .style("opacity", 0.8)
         .attr("x", function(d) {
           d.right = this;
           return timeScale(d.endTime) + PADDING;
@@ -933,15 +952,13 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         .attr("y", function(d) {
           return yGScale(d.row) + PADDING_HEIGHT + PADDING_RECTANGLE;
         })
-        .attr("width", function(d) {
-          return WIDTH_RESIZE;
-        })
+        .attr("width", WIDTH_RESIZE)
         .attr("height", function(d){
             return WIDTH_RECTANGLE + (d.gate.split(",").length > 1 ? eval(gatesArray.slice(d.groupIndexFrom,d.groupIndexTo).join('+')) : 0) * ROW_HEIGHT;
         })
         .attr("cursor", "ew-resize")
-        .on('mouseover', showDrag)
-        .on('mouseout', hideDrag)
+        // .on('mouseover', showDrag)
+        // .on('mouseout', hideDrag)
         .call(dragright);
         //up
       svg.selectAll("rect.up")
@@ -949,28 +966,22 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         .enter()
         .append("rect")
         .attr("class", "rectup")
-        .style("fill", function(d){
-          if (d.status !== "0") {
-            return COLOR.RECT_FILL_ROUND_Freeze;
-          } else {
-            return COLOR.RECT_FILL_ROUND_Move;
-          }
-        })
-        .style("opacity", 0)
+        .style("fill", colorOfResize)
+        .style("opacity", 0.8)
         .attr("x", function(d) {
           d.up = this;
-          return timeScale(d.startTime) + PADDING;
+          return timeScale(d.startTime) + PADDING - WIDTH_RESIZE;
         })
         .attr("y", function(d) {
           return yGScale(d.row) + PADDING_HEIGHT + PADDING_RECTANGLE - HEIGHT_RISIZE;
         })
         .attr("width", function(d) {
-          return d.width;
+          return d.width + WIDTH_RESIZE * 2;
         })
         .attr("height", HEIGHT_RISIZE)
         .attr("cursor", "ns-resize")
-        .on('mouseover', showDrag)
-        .on('mouseout', hideDrag)
+        // .on('mouseover', showDrag)
+        // .on('mouseout', hideDrag)
         .call(dragup);
         //down
       svg.selectAll("rect.down")
@@ -978,33 +989,27 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         .enter()
         .append("rect")
         .attr("class", "rectdown")
-        .style("fill", function(d){
-          if (d.status !== "0") {
-            return COLOR.RECT_FILL_ROUND_Freeze;
-          } else {
-            return COLOR.RECT_FILL_ROUND_Move;
-          }
-        })
-        .style("opacity", 0)
+        .style("fill", colorOfResize)
+        .style("opacity", 0.8)
         .attr("x", function(d) {
           d.down = this;
-          return timeScale(d.startTime) + PADDING;
+          return timeScale(d.startTime) + PADDING - WIDTH_RESIZE;
         })
         .attr("y", function(d) {
           return yGScale(d.row) + PADDING_HEIGHT + (ROW_HEIGHT + WIDTH_RECTANGLE) / 2 + (d.gate.split(",").length > 1 ? eval(gatesArray.slice(d.groupIndexFrom,d.groupIndexTo).join('+')) : 0) * ROW_HEIGHT;
         })
         .attr("width", function(d) {
-          return d.width;
+          return d.width + WIDTH_RESIZE * 2;
         })
         .attr("height", HEIGHT_RISIZE)
         .attr("cursor", "ns-resize")
-        .on('mouseover', showDrag)
-        .on('mouseout', hideDrag)
+        // .on('mouseover', showDrag)
+        // .on('mouseout', hideDrag)
         .call(dragdown);
         //legend
         //rect
-      svg.selectAll("legend")
-        .data(LEGEND_ARRAY)
+      svg.selectAll("legend.content")
+        .data(LEGEND_CONTENT)
         .enter()
         .append("rect")
         .style("opacity", 0.5)
@@ -1013,15 +1018,13 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         })
         .attr("x", MARGIN + PADDING + PADDING_LEGEND)
         .attr("y", function(d) {
-          return PADDING_HEIGHT + ROW_HEIGHT + PADDING_LEGEND + LEGEND_ARRAY.indexOf(d) * (HEIGHT_LEGEND_ITEM + PADDING_LEGEND);
+          return PADDING_HEIGHT + ROW_HEIGHT + PADDING_LEGEND + LEGEND_CONTENT.indexOf(d) * (HEIGHT_LEGEND_ITEM + PADDING_LEGEND);
         }) 
-        .attr("width", function(d) {
-          return WIDTH_LEGEND_ITEM;
-        })
-        .attr("height", HEIGHT_LEGEND_ITEM);
+        .attr("width", WIDTH_LEGEND_ITEM)
+        .attr("height",HEIGHT_LEGEND_ITEM);
         //description
-      svg.selectAll("text.legend")
-      .data(LEGEND_ARRAY)
+      svg.selectAll("text.legend.content")
+      .data(LEGEND_CONTENT)
       .enter()
       .append("text")
       // .attr("class", "content")
@@ -1031,29 +1034,97 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
       })
       .attr("x", MARGIN + PADDING + WIDTH_LEGEND / 3)
       .attr("y", function(d) {
-        return PADDING_HEIGHT + ROW_HEIGHT + PADDING_LEGEND + PADDING_LEGEND_TEXT + LEGEND_ARRAY.indexOf(d) * (HEIGHT_LEGEND_ITEM + PADDING_LEGEND);
+        return PADDING_HEIGHT + ROW_HEIGHT + PADDING_LEGEND + PADDING_LEGEND_TEXT + LEGEND_CONTENT.indexOf(d) * (HEIGHT_LEGEND_ITEM + PADDING_LEGEND);
       });
-      if(latestChangeAppointment){
+
+      //up
+      svg.selectAll("legend.border")
+        .data(LEGEND_BORDER)
+        .enter()
+        .append("rect")
+        .style("opacity", 0.5)
+        .style("fill", function(d){
+          return d.color;
+        })
+        .attr("x", MARGIN + PADDING + PADDING_LEGEND)
+        .attr("y", function(d) {
+          return PADDING_HEIGHT + ROW_HEIGHT + PADDING_LEGEND + (LEGEND_BORDER.indexOf(d) + LEGEND_CONTENT.length )* (HEIGHT_LEGEND_ITEM + PADDING_LEGEND);
+        }) 
+        .attr("width", WIDTH_LEGEND_ITEM)
+        .attr("height",HEIGHT_RISIZE);
+        //down
+    svg.selectAll("legend.border")
+        .data(LEGEND_BORDER)
+        .enter()
+        .append("rect")
+        .style("opacity", 0.5)
+        .style("fill", function(d){
+          return d.color;
+        })
+        .attr("x", MARGIN + PADDING + PADDING_LEGEND)
+        .attr("y", function(d) {
+          return PADDING_HEIGHT + ROW_HEIGHT + PADDING_LEGEND + (LEGEND_BORDER.indexOf(d) + LEGEND_CONTENT.length )* (HEIGHT_LEGEND_ITEM + PADDING_LEGEND) + HEIGHT_LEGEND_ITEM - HEIGHT_RISIZE;
+        }) 
+        .attr("width", WIDTH_LEGEND_ITEM)
+        .attr("height",HEIGHT_RISIZE);
+    //left
+    svg.selectAll("legend.border")
+        .data(LEGEND_BORDER)
+        .enter()
+        .append("rect")
+        .style("opacity", 0.5)
+        .style("fill", function(d){
+          return d.color;
+        })
+        .attr("x", MARGIN + PADDING + PADDING_LEGEND)
+        .attr("y", function(d) {
+          return PADDING_HEIGHT + ROW_HEIGHT + PADDING_LEGEND + (LEGEND_BORDER.indexOf(d) + LEGEND_CONTENT.length )* (HEIGHT_LEGEND_ITEM + PADDING_LEGEND);
+        }) 
+        .attr("width", WIDTH_RESIZE)
+        .attr("height",HEIGHT_LEGEND_ITEM);
+    //right
+    svg.selectAll("legend.border")
+        .data(LEGEND_BORDER)
+        .enter()
+        .append("rect")
+        .style("opacity", 0.5)
+        .style("fill", function(d){
+          return d.color;
+        })
+        .attr("x", MARGIN + PADDING + PADDING_LEGEND + WIDTH_LEGEND_ITEM - WIDTH_RESIZE)
+        .attr("y", function(d) {
+          return PADDING_HEIGHT + ROW_HEIGHT + PADDING_LEGEND + (LEGEND_BORDER.indexOf(d) + LEGEND_CONTENT.length )* (HEIGHT_LEGEND_ITEM + PADDING_LEGEND);
+        }) 
+        .attr("width", WIDTH_RESIZE)
+        .attr("height",HEIGHT_LEGEND_ITEM);
+        //description
+      svg.selectAll("text.legend.border")
+      .data(LEGEND_BORDER)
+      .enter()
+      .append("text")
+      // .attr("class", "content")
+      .style("fill", COLOR.RECT_TEXT)
+      .text(function(d) {
+        return d.text;
+      })
+      .attr("x", MARGIN + PADDING + WIDTH_LEGEND / 3)
+      .attr("y", function(d) {
+        return PADDING_HEIGHT + ROW_HEIGHT + PADDING_LEGEND + PADDING_LEGEND_TEXT + (LEGEND_BORDER.indexOf(d) + LEGEND_CONTENT.length ) * (HEIGHT_LEGEND_ITEM + PADDING_LEGEND);
+      });
+      // if(latestChangeAppointment){
         // TBD
-       // tipLastChanged.show();
-      }       
+       //  tipLastChanged.offset([
+       //      parseFloat(latestChangeAppointment.body.getAttribute("y")) + WIDTH_RECTANGLE / 2,
+       //      parseFloat(latestChangeAppointment.body.getAttribute("x")) + parseFloat(latestChangeAppointment.body.getAttribute("width")),
+       //  ]);
+       // tipLastChanged.show(latestChangeAppointment.body);
+      // }       
       return;
     }
-
-    var tipContent = d3.tip()
-        .attr('class', 'd3-tip')
-        .html(function(d) {
-            return "<span style='color:red'>TU: " + d.TU + "</span>";
-        });
-    svg.call(tipContent);
-
-    // var tipLastChanged = d3.tip()
-    //     .attr('class', 'd3-tip')
-    //     .html(function(d) {
-    //         return "<span style='color:red'>Test</span>";
-    //     });
-    // svg.call(tipLastChanged);
     drawGantt();
+}
+function singleSubmit(){
+    alert(123);
 }
   </script>
 </body>
