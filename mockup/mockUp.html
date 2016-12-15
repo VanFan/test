@@ -172,10 +172,10 @@ var TITLE_SECTIONID_WIDTH = 50,
   // },
   {
     color : COLOR.RECT_FILL_act1,
-    text : "进货"
+    text : "收货"
   },{
     color : COLOR.RECT_FILL_act2,
-    text : "出货"
+    text : "发货"
   },
   // {
   //   color : COLOR.RECT_FILL_act3,
@@ -318,7 +318,7 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
 
     function resetD3() {
       d3.select("svg").remove();
-      d3.selectAll(".d3-tip").remove();
+      // d3.selectAll(".d3-tip").remove();
       svg = d3.select("#gantt_chart").append("svg")
         .attr("style", "overflow-y:scroll !important")
         .attr("width", WIDTH_SVG)
@@ -764,12 +764,12 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
     function drawGantt() {
       generateData();
       //tip
-      var tipContent = d3.tip()
-        .attr('class', 'd3-tip')
-        .html(function(d) {
-            return "<span style='color:red'>TU: " + d.TU + "</span>";
-        });
-    svg.call(tipContent);
+    //   var tipContent = d3.tip()
+    //     .attr('class', 'd3-tip')
+    //     .html(function(d) {
+    //         return "<span style='color:red'>TU: " + d.TU + "</span>";
+    //     });
+    // svg.call(tipContent);
 
     // var tipLastChanged = d3.tip()
     //     .direction('e')
@@ -811,15 +811,38 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
       lineMax = i;
       //Title
       // SECTION ID
-      svg.append("text")
-          .attr("class", "title")
-          .attr("transform", "translate(" + TITLE_SECTIONID_WIDTH / 2 + ", " + 270 + ")rotate(270)")
-          .text("班组号");
+    var aTitle = "作业线".split("");
+    svg.selectAll("text.title.SECTIONID")
+        .data(aTitle)
+        .enter()
+        .append("text")
+        .attr("class", "title")
+        // .attr("transform", "translate(" + TITLE_SECTIONID_WIDTH / 2 + ", " + 270 + ")")
+        .attr("x", TITLE_SECTIONID_WIDTH / 2 - 20)
+        .attr("y", function(d){
+            return aTitle.indexOf(d) * ROW_HEIGHT + 200;
+        })
+        .text(function(d){
+            return d;
+        });
       // TIME
       svg.append("text")
           .attr("class", "title")
           .attr("transform", "translate(" + (MARGIN / 2 + PADDING - 200) + ", " + PADDING_HEIGHT / 2 + ")")
-          .text(timeMin.toLocaleString() + "   ~   " + timeMax.toLocaleString());
+          .text(timeMin.getFullYear() + "年" 
+            + (timeMin.getMonth() + 1)+ "月"
+            + timeMin.getDate() + "日" 
+            + formatter2(timeMin.getHours()) + ":"
+            + formatter2(timeMin.getMinutes()) + ":"
+            + formatter2(timeMin.getSeconds())
+            + "   ~   " 
+            + timeMax.getFullYear() + "年" 
+            + (timeMax.getMonth() + 1)+ "月"
+            + timeMax.getDate() + "日" 
+            + formatter2(timeMax.getHours()) + ":"
+            + formatter2(timeMax.getMinutes()) + ":"
+            + formatter2(timeMax.getSeconds())
+        );
       //text
       svg.selectAll("text.plate")
       .data(intervals)
@@ -908,8 +931,8 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
             return WIDTH_RECTANGLE + (d.gate.split(",").length > 1 ? eval(gatesArray.slice(d.groupIndexFrom,d.groupIndexTo).join('+')) : 0) * ROW_HEIGHT;
         })
         .attr("cursor", "move")
-        .on('mouseover', tipContent.show)
-        .on('mouseout', tipContent.hide)
+        // .on('mouseover', tipContent.show)
+        // .on('mouseout', tipContent.hide)
         // .on("dblclick",function(){
         //     alert(123);
         // })
