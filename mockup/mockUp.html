@@ -936,7 +936,21 @@ function test(aGateList, aAppointment, aDateLabels, aTimeLabel, oAPI){
         // .on("dblclick",function(){
         //     alert(123);
         // })
+        .attr("width", function(d) {
+          return 0;
+        })
         .call(drag);
+    svg.selectAll(".rect")
+        .transition()
+        .delay(function(d,i){
+            return i * 200;
+        })
+        .duration(2000)
+        .ease("bounce")
+        .attr("width", function(d) {
+          d.width = timeScale(d.endTime) - timeScale(d.startTime);
+          return d.width;
+        });
         //left
       svg.selectAll("rect.left")
         .data(intervals)
